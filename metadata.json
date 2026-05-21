@@ -1,0 +1,6 @@
+{
+  "name": "Responsive AI Search Visualizer",
+  "description": "A high-fidelity fully-responsive academic learning platform and simulator for BFS, DFS, IDS, and UCS algorithms on graph network topologies and 2D grid meshes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
