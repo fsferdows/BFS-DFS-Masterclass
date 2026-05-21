@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#022c22" />
+      <stop offset="100%" stop-color="#030712" />
+    </radialGradient>
+    <linearGradient id="emeraldTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#14b8a6" />
+    </linearGradient>
+    <linearGradient id="cyanBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" rx="40" fill="url(#bgGrad)" />
+  <rect width="180" height="180" x="6" y="6" rx="36" fill="none" stroke="url(#emeraldTeal)" stroke-width="2" stroke-opacity="0.3" />
+  
+  <!-- Graph Connections (Edges) -->
+  <line x1="56" y1="56" x2="136" y2="56" stroke="#1e293b" stroke-width="4" stroke-dasharray="2,2" />
+  <line x1="56" y1="56" x2="96" y2="116" stroke="url(#emeraldTeal)" stroke-width="4" />
+  <line x1="136" y1="56" x2="96" y2="116" stroke="url(#cyanBlue)" stroke-width="4" />
+  <line x1="96" y1="116" x2="96" y2="156" stroke="#1e293b" stroke-width="4" />
+  <line x1="56" y1="56" x2="56" y2="136" stroke="#1e293b" stroke-width="3" />
+  <line x1="136" y1="56" x2="136" y2="136" stroke="#1e293b" stroke-width="3" />
+
+  <!-- Graph Nodes -->
+  <!-- Root Node -->
+  <circle cx="56" cy="56" r="16" fill="url(#emeraldTeal)" />
+  <circle cx="56" cy="56" r="8" fill="#ffffff" fill-opacity="0.6"/>
+
+  <!-- Left Node -->
+  <circle cx="136" cy="56" r="14" fill="#1e293b" stroke="#334155" stroke-width="2" />
+  
+  <!-- Target / Path Nodes -->
+  <circle cx="96" cy="116" r="18" fill="url(#cyanBlue)" />
+  <polygon points="96,106 104,122 88,122" fill="#ffffff" />
+
+  <circle cx="96" cy="156" r="10" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+  <circle cx="56" cy="136" r="10" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+  <circle cx="136" cy="136" r="10" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
+</svg>
