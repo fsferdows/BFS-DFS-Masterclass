@@ -25,6 +25,83 @@ interface Section {
   icon: React.ReactNode;
 }
 
+const ALGO_DATA = {
+  BFS: {
+    definition: "Breadth-First Search systematically explores a graph layer-by-layer. It expands the shallowest unexpanded node first, maintaining an active frontier using a First-In-First-Out (FIFO) queue queueing strategy. It acts as an optimal explorer for trees where all transition step-weights are identical.",
+    pseudocode: `function breadth_first_search(root_node, goal):
+  frontier = Queue([root_node]) 
+  visited = Set([root_node])
+  
+  while not frontier.is_empty():
+    node = frontier.dequeue()
+    if node.state == goal:
+      return path_to(node)
+      
+    for child in node.get_children():
+      if child.state not in visited:
+        visited.add(child.state)
+        frontier.enqueue(child)
+  return failure`
+  },
+  DFS: {
+    definition: "Depth-First Search explores the deepest unexpanded branch first. It operates with a Last-In-First-Out (LIFO) stack layout. DFS plunges deep down a candidate path until a leaf vertex is hit, then backtracks to recursive branches. This keeps its memory utilization extremely compact.",
+    pseudocode: `function depth_first_search(root_node, goal):
+  frontier = Stack([root_node]) 
+  visited = Set()
+  
+  while not frontier.is_empty():
+    node = frontier.pop()
+    if node.state == goal:
+      return path_to(node)
+      
+    if node.state not in visited:
+      visited.add(node.state)
+      for child in node.get_children_reversed():
+        if child.state not in visited:
+          frontier.push(child)
+  return failure`
+  },
+  IDS: {
+    definition: "Iterative Deepening Search balances the completeness of BFS with the space-saving benefit of DFS. It carries out successive DFS iterations capped by an incrementally larger depth-limit (0, 1, 2, ..., d). It re-generates shallow layers but guarantees the optimal route finder in uniform graphs.",
+    pseudocode: `function iterative_deepening_search(root_node, goal):
+  for depth = 0 to infinity:
+    result = depth_limited_search(root_node, goal, depth)
+    if result != cutoff then return result
+
+function depth_limited_search(node, goal, limit):
+  if node.state == goal then return path_to(node)
+  if limit == 0 then return cutoff
+  
+  cutoff_occurred = false
+  for child in node.get_children():
+    result = depth_limited_search(child, goal, limit - 1)
+    if result == cutoff then cutoff_occurred = true
+    else if result != failure then return result
+    
+  return cutoff_occurred ? cutoff : failure`
+  },
+  UCS: {
+    definition: "Uniform Cost Search generalizes BFS to find the optimal path in graphs with non-uniform transition costs. It uses a Priority Queue (ordered by accumulated path cost g(n)) to expand nodes in order of non-decreasing total cost, finding optimal solutions safely with non-negative edge costs.",
+    pseudocode: `function uniform_cost_search(root_node, goal):
+  frontier = PriorityQueue(ordered_by: g(n))
+  frontier.insert(root_node, priority = 0)
+  visited = Set() # tracks explored states
+  
+  while not frontier.is_empty():
+    node, cost = frontier.pop_min()
+    if node.state == goal:
+      return path_to(node)
+      
+    if node.state not in visited:
+      visited.add(node.state)
+      for child, step_cost in node.get_children_with_costs():
+        if child.state not in visited:
+          g_cost = cost + step_cost
+          frontier.insert_or_update(child, priority = g_cost)
+  return failure`
+  }
+};
+
 export default function EducationalHandbook() {
   const [activeSection, setActiveSection] = useState<string>('all');
   const [copiedText, setCopiedText] = useState<string | null>(null);
@@ -42,12 +119,16 @@ export default function EducationalHandbook() {
   const [showExplanation, setShowExplanation] = useState<boolean>(false);
   const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
 
+  // Selector for the Interactive Explanation Panel
+  const [selectedExposAlgo, setSelectedExposAlgo] = useState<'BFS' | 'DFS' | 'IDS' | 'UCS'>('BFS');
+
   const sections: Section[] = [
     { id: '1', title: '1. Conceptual Foundations', icon: <BookOpen className="w-4 h-4" /> },
     { id: '2', title: '2. Breadth-First Search (BFS)', icon: <Layers className="w-4 h-4" /> },
     { id: '3', title: '3. Depth-First Search (DFS)', icon: <ArrowRight className="w-4 h-4" /> },
     { id: '4', title: '4. Iterative Deepening Search (IDS)', icon: <Target className="w-4 h-4 text-cyan-400" /> },
     { id: '5', title: '5. Uniform Cost Search (UCS)', icon: <Coins className="w-4 h-4 text-amber-400" /> },
+    { id: '5a', title: '5a. Dynamic Technical Explanation Panel', icon: <Lightbulb className="w-4 h-4 text-amber-450 text-amber-400" /> },
     { id: '6', title: '6. Side-by-Side Comparison Matrix', icon: <Table className="w-4 h-4 text-pink-400" /> },
     { id: '7', title: '7. Complexity Sandbox Calculator', icon: <Cpu className="w-4 h-4 text-emerald-400" /> },
     { id: '8', title: '8. Code Implementations Reference', icon: <Code className="w-4 h-4" /> },
@@ -638,6 +719,121 @@ def uniform_cost_search(graph, start, target):
             </section>
           )}
 
+          {/* Section 5a: Dynamic Technical Explanation Panel */}
+          {(activeSection === 'all' || activeSection === '5a') && (
+            <section id="ref-section-5a" className="space-y-4 border-t border-slate-800 pt-6">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2 font-display">
+                <span className="text-amber-400 font-mono">5a.</span> Dynamic Technical Explanation Panel
+              </h2>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Toggle through primary traversal paradigms to inspect formal derivations, specialized pseudocode implementations, and asymptotic correctness bounds dynamically.
+              </p>
+
+              {/* Dynamic Algorithm Selector Bar */}
+              <div className="grid grid-cols-4 bg-slate-900 p-1 rounded-xl border border-slate-800 text-xs font-mono font-bold max-w-lg">
+                {(['BFS', 'DFS', 'IDS', 'UCS'] as const).map((algo) => (
+                  <button
+                    key={algo}
+                    onClick={() => setSelectedExposAlgo(algo)}
+                    className={`py-2 text-center rounded-lg cursor-pointer transition-all ${
+                      selectedExposAlgo === algo
+                        ? 'bg-amber-500 text-slate-950 shadow-sm font-boldScale font-bold'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {algo}
+                  </button>
+                ))}
+              </div>
+
+              {/* Interactive Dynamic Explanation Content */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                
+                {/* Formal Definitions & Core Pseudocode */}
+                <div className="space-y-4 border border-slate-800/80 rounded-xl bg-slate-950/70 p-4 font-mono text-xs">
+                  <div>
+                    <span className="text-emerald-400 font-bold block border-b border-slate-800 pb-1 uppercase tracking-wider">
+                      📋 Formal Definition: {selectedExposAlgo}
+                    </span>
+                    <p className="text-slate-300 leading-relaxed mt-2 text-[11px] font-sans">
+                      {ALGO_DATA[selectedExposAlgo].definition}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span className="text-amber-400 font-bold block border-b border-slate-800 pb-1 uppercase tracking-wider">
+                      💻 Core Algorithmic Pseudocode
+                    </span>
+                    <pre className="text-[10.5px] text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap mt-2.5 p-2 bg-slate-900 border border-slate-800 rounded-lg">
+                      {ALGO_DATA[selectedExposAlgo].pseudocode}
+                    </pre>
+                  </div>
+                </div>
+
+                {/* Mathematical Derivations & Analytical Correctness */}
+                <div className="space-y-4 border border-slate-800/80 rounded-xl bg-slate-950/70 p-4 text-xs font-mono">
+                  <div>
+                    <span className="text-cyan-400 font-bold block border-b border-slate-800 pb-1 uppercase tracking-wider">
+                      📐 Mathematical Correctness & Complexity Derivation
+                    </span>
+                    <div className="text-[11px] text-slate-300 leading-relaxed space-y-3 font-sans mt-2.5">
+                      {selectedExposAlgo === 'BFS' && (
+                        <>
+                          <div>
+                            <strong className="text-slate-200 block mb-0.5">Completeness proof:</strong> If the branch factor b is finite and a solution exists at depth d, BFS will visit every node above depth d. Thus, it will eventually find the shallowest target in finite steps.
+                          </div>
+                          <div className="border-t border-slate-800/50 pt-1.5 mt-1.5">
+                            <strong className="text-slate-200 block mb-0.5">Derivation of space requirements:</strong> At depth d, the frontier queue occupies the entire bottom-most tier of width <code className="text-amber-450 text-amber-400 font-mono">O(b^d)</code>. It also retains parent nodes, leading to a maximal space consumption of <code className="text-amber-450 text-amber-400 font-mono">O(b^d)</code> bytes.
+                          </div>
+                        </>
+                      )}
+                      {selectedExposAlgo === 'DFS' && (
+                        <>
+                          <div>
+                            <strong className="text-slate-200 block mb-0.5">Completeness constraints:</strong> DFS is incomplete in infinite-depth trees or graphs with state cycles, as it might plunge along an endless path and miss solutions. Cyclic guardians are required.
+                          </div>
+                          <div className="border-t border-slate-800/50 pt-1.5 mt-1.5">
+                            <strong className="text-slate-200 block mb-0.5">Derivation of space requirements:</strong> DFS stack only retains the path from root to node, along with unvisited sibling branches. For max depth m, space complexity scales to a linear <code className="text-amber-450 text-amber-400 font-mono">O(b · m)</code>.
+                          </div>
+                        </>
+                      )}
+                      {selectedExposAlgo === 'IDS' && (
+                        <>
+                          <div>
+                            <strong className="text-slate-200 block mb-0.5">Optimality and Completeness:</strong> IDS achieves the complete and optimal pathfinding of standard BFS in uniform cost graphs while bypassing memory limitations.
+                          </div>
+                          <div className="border-t border-slate-800/50 pt-1.5 mt-1.5">
+                            <strong className="text-slate-200 block mb-0.5">Asymptotic Bounds:</strong> Time complexity is identical to depth-d BFS, <code className="text-amber-450 text-amber-400 font-mono">O(b^d)</code>, while space is constrained to a linear scale of <code className="text-amber-450 text-amber-400 font-mono">O(b · d)</code>.
+                          </div>
+                        </>
+                      )}
+                      {selectedExposAlgo === 'UCS' && (
+                        <>
+                          <div>
+                            <strong className="text-slate-200 block mb-0.5">Optimality proof bounds:</strong> Let C* be the cost of the optimal solution. Because step weights are bounded lower by positive constant <code className="text-amber-450 text-amber-405 font-mono">ε &gt; 0</code>, total cost increases monotonically. Since UCS expands vertices in strict order of non-decreasing path cost, it is guaranteed to visit the optimal goal first.
+                          </div>
+                          <div className="border-t border-slate-800/50 pt-1.5 mt-1.5">
+                            <strong className="text-slate-200 block mb-0.5">Asymptotic Limits:</strong> UCS expands nodes based on total cost limits instead of simple depth:
+                            <code className="block mt-1 text-center bg-slate-900 border border-slate-800 py-1 rounded text-emerald-400 font-mono text-[10.5px]">{"Time / Space = O(b^(1 + floor(C* / \u03B5)))"}</code>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg text-[10.5px] leading-relaxed text-slate-400">
+                    <span className="text-slate-200 font-bold block mb-1">💡 Professor's Paradigm Note</span>
+                    {selectedExposAlgo === 'BFS' && "Use BFS when step-costs are uniform and physical memory capacity is not a constraint."}
+                    {selectedExposAlgo === 'DFS' && "Use DFS when searching deep graphs where solution density is high or memory scale is limited."}
+                    {selectedExposAlgo === 'IDS' && "Use IDS as the optimal complete choice under limited storage constraints."}
+                    {selectedExposAlgo === 'UCS' && "Use UCS (Dijkstra) when edge weights describe real physical impedances (latency, fuel, distance)."}
+                  </div>
+                </div>
+
+              </div>
+            </section>
+          )}
+
           {/* Section 6: Side-by-Side Comparison Matrix */}
           {(activeSection === 'all' || activeSection === '6') && (
             <section id="ref-section-6" className="space-y-4 border-t border-slate-800 pt-6">
@@ -666,6 +862,13 @@ def uniform_cost_search(graph, start, target):
                       <td className="p-2.5 border-r border-slate-850">Maximum depth first along current branch</td>
                       <td className="p-2.5 border-r border-slate-850">Depth-limited sequence incremental rounds</td>
                       <td className="p-2.5">Lowest cumulative path cost first g(n)</td>
+                    </tr>
+                    <tr>
+                      <td className="p-2.5 font-medium text-white bg-slate-950/35 border-r border-slate-850">Fringe Data Structure</td>
+                      <td className="p-2.5 border-r border-slate-850 font-semibold text-cyan-400">FIFO Queue (First-In-First-Out)</td>
+                      <td className="p-2.5 border-r border-slate-850 font-semibold text-purple-400">LIFO Stack (Last-In-First-Out)</td>
+                      <td className="p-2.5 border-r border-slate-850 font-semibold text-amber-400">LIFO Stack with limit checkpoints</td>
+                      <td className="p-2.5 font-semibold text-emerald-400">Priority Queue (ordered by path cost g)</td>
                     </tr>
                     <tr>
                       <td className="p-2.5 font-medium text-white bg-slate-950/35 border-r border-slate-850">Time Complexity</td>

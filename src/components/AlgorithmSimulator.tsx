@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, ChevronLeft, ChevronRight, RotateCcw, Info, Settings, HelpCircle, CheckCircle, Network, Cpu, Database, Award, ArrowUpRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { SimStep, SimType } from '../types';
 
 // Graph Node definitions
@@ -17,6 +18,78 @@ interface EdgeDef {
   target: string;
   cost: number;
   label?: string;
+}
+
+// Function to generate customized search tree parameters based on user input (b and d)
+function buildDynamicTree(b: number, maxDepth: number): { nodes: NodeDef[]; adjacency: Record<string, string[]>; edges: EdgeDef[] } {
+  const nodes: NodeDef[] = [];
+  const adjacency: Record<string, string[]> = {};
+  const edges: EdgeDef[] = [];
+
+  // Root Node
+  nodes.push({
+    id: 'R',
+    label: 'R',
+    x: 245,
+    y: 48,
+    complexity: 'O(1) Root',
+    role: 'Origin State'
+  });
+  adjacency['R'] = [];
+
+  // BFS construct queue to generate symmetrical layout coordinates
+  const queue: { id: string; level: number; x: number; span: number }[] = [];
+  queue.push({ id: 'R', level: 0, x: 245, span: 400 });
+
+  let nodeCounter = 1;
+
+  while (queue.length > 0) {
+    const parent = queue.shift()!;
+    if (parent.level >= maxDepth) continue;
+
+    const currentLevel = parent.level + 1;
+    const parentX = parent.x;
+    const parentSpan = parent.span;
+
+    const stepWidth = parentSpan / b;
+    const startX = parentX - parentSpan / 2 + stepWidth / 2;
+
+    for (let c = 0; c < b; c++) {
+      const childId = `N${nodeCounter++}`;
+      const childX = startX + c * stepWidth;
+      const childY = 48 + currentLevel * 85;
+
+      nodes.push({
+        id: childId,
+        label: childId,
+        x: childX,
+        y: childY,
+        complexity: `O(b^${currentLevel})`,
+        role: `Dynamic Node Depth ${currentLevel}`
+      });
+
+      adjacency[childId] = [];
+      adjacency[parent.id].push(childId);
+
+      // Symmetrical costs for Uniform Cost Search
+      const cost = Math.max(1, (c + 1) * 3 - currentLevel);
+      edges.push({
+        source: parent.id,
+        target: childId,
+        cost,
+        label: `Cost ${cost}`
+      });
+
+      queue.push({
+        id: childId,
+        level: currentLevel,
+        x: childX,
+        span: stepWidth * 0.85
+      });
+    }
+  }
+
+  return { nodes, adjacency, edges };
 }
 
 // 1. FAANG Tree/Canonical graph
@@ -758,8 +831,16 @@ const getAlgoDetails = (algo: SimType) => {
 
 export default function AlgorithmSimulator() {
   const [algoType, setAlgoType] = useState<SimType>('UCS');
-  const [graphType, setGraphType] = useState<'canonical' | 'neural'>('neural');
+  const [graphType, setGraphType] = useState<'canonical' | 'neural' | 'custom'>('neural');
   
+  // Sizing calibration limits for custom tree generator
+  const [bfLimit, setBfLimit] = useState<number>(3);
+  const [depthLimit, setDepthLimit] = useState<number>(2);
+
+  const customTree = useMemo(() => {
+    return buildDynamicTree(bfLimit, depthLimit);
+  }, [bfLimit, depthLimit]);
+
   // Set default start/target nodes base on chosen graph type
   const [startNode, setStartNode] = useState<string>('Core_AI');
   const [targetNode, setTargetNode] = useState<string>('Telemetry_DB');
@@ -777,16 +858,20 @@ export default function AlgorithmSimulator() {
     if (graphType === 'canonical') {
       setStartNode('A');
       setTargetNode('H');
-    } else {
+    } else if (graphType === 'neural') {
       setStartNode('Core_AI');
       setTargetNode('Telemetry_DB');
+    } else if (graphType === 'custom') {
+      setStartNode('R');
+      const nodeIds = customTree.nodes.map(n => n.id);
+      setTargetNode(nodeIds[nodeIds.length - 1] || 'R');
     }
-  }, [graphType]);
+  }, [graphType, customTree]);
 
   // Read active graph definitions
-  const activeNodes = graphType === 'canonical' ? CANONICAL_NODES : NEURAL_NODES;
-  const activeAdjacency = graphType === 'canonical' ? CANONICAL_ADJACENCY : NEURAL_ADJACENCY;
-  const activeEdges = graphType === 'canonical' ? CANONICAL_EDGES : NEURAL_EDGES;
+  const activeNodes = graphType === 'canonical' ? CANONICAL_NODES : (graphType === 'neural' ? NEURAL_NODES : customTree.nodes);
+  const activeAdjacency = graphType === 'canonical' ? CANONICAL_ADJACENCY : (graphType === 'neural' ? NEURAL_ADJACENCY : customTree.adjacency);
+  const activeEdges = graphType === 'canonical' ? CANONICAL_EDGES : (graphType === 'neural' ? NEURAL_EDGES : customTree.edges);
 
   // Generate steps whenever algorithm, startNode, targetNode, or graph bounds change
   useEffect(() => {
@@ -803,7 +888,7 @@ export default function AlgorithmSimulator() {
     setSteps(newSteps);
     setCurrentStepIdx(0);
     setIsPlaying(false);
-  }, [algoType, startNode, targetNode, graphType]);
+  }, [algoType, startNode, targetNode, graphType, activeNodes, activeAdjacency, activeEdges]);
 
   // Auto Playback logic
   useEffect(() => {
@@ -967,7 +1052,7 @@ export default function AlgorithmSimulator() {
         {/* Graph Mesh Type Selector */}
         <div className="flex items-center gap-2">
           <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider block font-mono">Topology Mode:</span>
-          <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
+          <div className="flex flex-wrap bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs gap-0.5 md:gap-0">
             <button
               onClick={() => {
                 setGraphType('neural');
@@ -989,6 +1074,17 @@ export default function AlgorithmSimulator() {
               }`}
             >
               <ArrowUpRight className="w-3.5 h-3.5" /> Canonical Tree Graph
+            </button>
+            <button
+              onClick={() => {
+                setGraphType('custom');
+                setIsPlaying(false);
+              }}
+              className={`px-3 py-1.5 rounded-md font-semibold cursor-pointer transition-all flex items-center gap-1.5 ${
+                graphType === 'custom' ? 'bg-indigo-505 bg-indigo-500 text-slate-950 font-bold shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5 shrink-0" /> Custom Dynamic Tree
             </button>
           </div>
         </div>
@@ -1081,6 +1177,49 @@ export default function AlgorithmSimulator() {
             </select>
           </div>
         </div>
+
+        {/* Dynamic Topology Custom Node Calibration Inputs */}
+        {graphType === 'custom' && (
+          <div className="md:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 mt-1 border-t border-slate-800/60 font-mono text-[11.5px] animate-fadeIn">
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold text-[10px] uppercase">Custom Tree Branching Size (b):</span>
+                <span className="text-emerald-400 font-bold bg-slate-900 border border-slate-805 px-2 py-0.5 rounded">{bfLimit} branches</span>
+              </div>
+              <input
+                type="range"
+                min="2"
+                max="4"
+                value={bfLimit}
+                onChange={(e) => {
+                  setBfLimit(Number(e.target.value));
+                  setIsPlaying(false);
+                }}
+                className="w-full h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <span className="text-[9.5px] text-slate-500 block">Number of branching children paths spawned per parent vertex</span>
+            </div>
+            
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-semibold text-[10px] uppercase">Solution Max Depth Boundary (d):</span>
+                <span className="text-cyan-400 font-bold bg-slate-900 border border-slate-805 px-2 py-0.5 rounded">Level {depthLimit}</span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                value={depthLimit}
+                onChange={(e) => {
+                  setDepthLimit(Number(e.target.value));
+                  setIsPlaying(false);
+                }}
+                className="w-full h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+              <span className="text-[9.5px] text-slate-500 block">Theoretical solution depth limit or vertical structural levels</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Sandbox Layout Panel */}
@@ -1092,50 +1231,65 @@ export default function AlgorithmSimulator() {
           <div className="flex justify-between items-center text-[10px] text-slate-400 mb-2">
             <span className="font-mono flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse inline-block" /> 
-              Active Graph: <strong className="text-slate-200 font-semibold">{graphType === 'neural' ? 'Neural Network Mesh' : 'FAANG Tree Network'}</strong>
+              Active Graph: <strong className="text-slate-200 font-semibold">{graphType === 'neural' ? 'Neural Network Mesh' : (graphType === 'canonical' ? 'FAANG Tree Network' : 'Custom Dynamic Tree')}</strong>
             </span>
             <span className="font-mono bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
               Pass State: Step {currentStepIdx + 1} of {steps.length}
             </span>
           </div>
 
-          {/* CUSTOM INTERACTIVE HOVER NODE TOOLTIP HUD */}
+          {/* FLOATING HOVER NODE TOOLTIP OVERLAY */}
           {hoveredStatusObj && hoveredNodeId && (
-            <div className="absolute top-12 left-4 z-20 bg-slate-900/95 backdrop-blur-md border border-slate-800/90 rounded-xl p-3.5 shadow-2x max-w-xs transition-all pointer-events-none animate-fadeIn">
-              <div className="flex justify-between items-center gap-3.5 mb-1.5">
-                <span className="font-mono text-xs font-bold text-teal-300 flex items-center gap-1.5">
-                  <span className="inline-block px-1.5 py-0.5 rounded bg-slate-800 text-[10px] text-white font-mono">{hoveredNodeId}</span>
-                  Node Blueprint
-                </span>
-                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border ${hoveredStatusObj.badgeColor}`}>
-                  {hoveredStatusObj.status}
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 space-y-1.5 font-mono">
-                <div>
-                  <span className="text-slate-500 text-[9px] uppercase font-bold block">Role Assignment:</span>
-                  <p className="text-slate-200 font-sans text-[11px] leading-tight font-medium">{hoveredStatusObj.role}</p>
+            (() => {
+              const nodeObj = activeNodes.find(n => n.id === hoveredNodeId);
+              if (!nodeObj) return null;
+              
+              const lPercent = (nodeObj.x / 490) * 100;
+              const tPercent = (nodeObj.y / 350) * 100;
+
+              return (
+                <div 
+                  className="absolute z-30 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 rounded-xl p-3 shadow-2xl w-44 pointer-events-none animate-fadeIn select-none font-mono text-[9.5px] leading-tight text-slate-300"
+                  style={{
+                    left: `${lPercent}%`,
+                    top: `${tPercent - 4}%`,
+                    transform: 'translate(-50%, -100%)',
+                  }}
+                >
+                  <div className="absolute bottom-0 left-1/2 -ml-1.5 translate-y-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-800" />
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center gap-1 border-b border-slate-800 pb-1">
+                      <span className="font-bold text-teal-300 text-xs bg-slate-950 px-1.5 py-0.5 rounded">{hoveredNodeId}</span>
+                      <span className="text-[8px] text-slate-500 font-semibold truncate max-w-[90px]" title={nodeObj.role}>
+                        {nodeObj.role}
+                      </span>
+                    </div>
+                    
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[8px] text-slate-500 uppercase font-bold">State Status:</span>
+                      <span className={`px-1 rounded text-[8.5px] font-bold text-center border mt-0.5 ${hoveredStatusObj.badgeColor}`}>
+                        {hoveredStatusObj.status}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between border-t border-slate-800/50 pt-1 mt-0.5">
+                      <span>Asymptotic:</span>
+                      <strong className="text-amber-400 font-bold">{nodeObj.complexity}</strong>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span>Traversal Index:</span>
+                      <span className="font-bold text-emerald-400">
+                        {currentStep.visited.includes(hoveredNodeId) 
+                          ? `#${currentStep.visited.indexOf(hoveredNodeId) + 1} pop` 
+                          : 'Unreached'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between border-t border-slate-800/50 pt-1">
-                  <span>Asymptotic Growth:</span>
-                  <strong className="text-amber-400 font-bold">{hoveredStatusObj.complexity}</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span>Adjacent Conns:</span>
-                  <span className="font-semibold text-slate-300">
-                    {hoveredStatusObj.neighbors.length > 0 ? hoveredStatusObj.neighbors.join(', ') : 'Dead End'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Visited Index:</span>
-                  <span className="font-semibold text-emerald-400 font-bold">
-                    {currentStep.visited.includes(hoveredNodeId) 
-                      ? `#${currentStep.visited.indexOf(hoveredNodeId) + 1} expanded` 
-                      : 'Unreached'}
-                  </span>
-                </div>
-              </div>
-            </div>
+              );
+            })()
           )}
 
           {/* SVG Canvas stage */}
@@ -1463,39 +1617,55 @@ export default function AlgorithmSimulator() {
                   <p className="text-[9px] text-slate-400 mt-1">Start step simulation to index frontier states</p>
                 </div>
               ) : (
-                <div className={`w-full flex ${algoType === 'BFS' ? 'flex-row gap-2 overflow-x-auto justify-start' : 'flex-col-reverse gap-1.5 overflow-y-auto justify-end'} items-stretch items-center p-1 h-full`}>
-                  {currentStep.frontier.map((nodeId, idx) => {
-                    const isNextOut = algoType === 'BFS' ? idx === 0 : algoType === 'DFS' || algoType === 'IDS' ? idx === currentStep.frontier.length - 1 : false;
-                    const isNodeHovered = hoveredNodeId === nodeId;
-                    
-                    // Recover priority queue weight if UCS selected
-                    const ucsCost = currentStep.frontierWithCosts?.find(item => item.node === nodeId)?.priority;
+                <div className={`w-full flex ${algoType === 'BFS' ? 'flex-row gap-2.5 overflow-x-auto justify-start' : 'flex-col gap-2 overflow-y-auto justify-start'} items-center p-1.5 h-full`}>
+                  <AnimatePresence mode="popLayout">
+                    {currentStep.frontier.map((nodeId, idx) => {
+                      const isNextOut = algoType === 'BFS' ? idx === 0 : (algoType === 'DFS' || algoType === 'IDS' ? idx === currentStep.frontier.length - 1 : idx === 0);
+                      const isNodeHovered = hoveredNodeId === nodeId;
+                      
+                      // Recover priority queue weight if UCS selected
+                      const ucsCost = currentStep.frontierWithCosts?.find(item => item.node === nodeId)?.priority;
 
-                    return (
-                      <div
-                        key={`${nodeId}-${idx}`}
-                        onMouseEnter={() => setHoveredNodeId(nodeId)}
-                        onMouseLeave={() => setHoveredNodeId(null)}
-                        className={`px-3 py-2 rounded-lg text-center font-mono text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer dynamic-fringe-card ${
-                          isNodeHovered
-                            ? 'bg-sky-500/20 border-sky-400 text-sky-300 scale-105'
-                            : isNextOut 
-                              ? 'bg-orange-500/20 border-orange-400 text-orange-300 border-2' 
-                              : `bg-slate-900 border border-slate-800 ${details.accentColor}`
-                        } ${algoType === 'BFS' ? 'min-w-[56px] shrink-0' : 'w-full'}`}
-                      >
-                        <span className="text-[8px] text-slate-500 select-none block tracking-tighter uppercase font-mono mb-0.5">
-                          {isNextOut ? 'Next Pop' : algoType === 'UCS' ? `PQ Cost` : 'Fringe'}
-                        </span>
-                        <span className="text-[12px] text-slate-200">{nodeId}</span>
-                        {algoType === 'UCS' && typeof ucsCost === 'number' && (
-                          <span className="text-[9px] bg-slate-950/80 px-1 py-0.5 rounded text-emerald-400 border border-slate-800 mt-1">
-                            g={ucsCost}
+                      // Use clean border colors depending on algorithm accents
+                      let borderStyle = 'border-slate-800 bg-slate-900/70 text-slate-300';
+                      if (isNodeHovered) {
+                        borderStyle = 'border-sky-400 bg-sky-500/15 text-sky-200 shadow-sm shadow-sky-450/40';
+                      } else if (isNextOut) {
+                        borderStyle = 'border-orange-500 bg-orange-500/10 text-orange-205 border-2';
+                      } else {
+                        if (algoType === 'BFS') borderStyle = 'border-cyan-500/15 bg-cyan-950/20 text-cyan-300';
+                        else if (algoType === 'DFS') borderStyle = 'border-purple-500/15 bg-purple-953 text-purple-300';
+                        else if (algoType === 'IDS') borderStyle = 'border-amber-500/15 bg-amber-953 text-amber-300';
+                        else borderStyle = 'border-emerald-500/15 bg-emerald-953 text-emerald-300';
+                      }
+
+                      return (
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                          transition={{ duration: 0.2, ease: "easeOut" }}
+                          key={`fringe-${nodeId}-${idx}`}
+                          onMouseEnter={() => setHoveredNodeId(nodeId)}
+                          onMouseLeave={() => setHoveredNodeId(null)}
+                          className={`px-3 py-2 rounded-lg text-center font-mono text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer border ${borderStyle} ${
+                            algoType === 'BFS' ? 'min-w-[70px] shrink-0' : 'w-full'
+                          }`}
+                        >
+                          <span className="text-[8px] text-slate-500 select-none block tracking-tighter uppercase font-mono mb-0.5">
+                            {isNextOut ? 'Next Pop' : (algoType === 'UCS' ? `Priority` : 'Fringe')}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                          <span className="text-[12px]">{nodeId}</span>
+                          {algoType === 'UCS' && typeof ucsCost === 'number' && (
+                            <span className="text-[9px] bg-slate-950/80 px-1 py-0.5 rounded text-emerald-400 border border-emerald-550/20 mt-1">
+                              g={ucsCost}
+                            </span>
+                          )}
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
                 </div>
               )}
             </div>
@@ -1567,18 +1737,21 @@ export default function AlgorithmSimulator() {
               </button>
             </div>
 
-            {/* Playback pacing Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 font-mono">PACING RATIO:</span>
-              <select
+            {/* Playback Speed Control Slider */}
+            <div className="flex flex-col gap-1 w-full md:w-56 font-mono text-[10px]">
+              <div className="flex justify-between items-center text-slate-400">
+                <span>SIMULATION PACING RATIO:</span>
+                <span className="text-emerald-450 text-emerald-400 font-bold font-mono">{(playbackSpeed / 1000).toFixed(2)}s interval</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="2500"
+                step="100"
                 value={playbackSpeed}
                 onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-                className="bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-300 cursor-pointer focus:outline-none"
-              >
-                <option value={2000}>Lazy (2s)</option>
-                <option value={1200}>Standard (1.2s)</option>
-                <option value={600}>Hyper (0.6s)</option>
-              </select>
+                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
             </div>
           </div>
 
