@@ -307,7 +307,7 @@ export default function App() {
               {!isSidebarCollapsed ? (
                 <div className="flex flex-col gap-4">
                   <div className="border-x border-b rounded-b-2xl overflow-hidden transition-colors duration-300" style={{ borderColor: theme === 'dark' ? '#1e293b' : '#e2e8f0' }}>
-                    <EducationalHandbook />
+                    <EducationalHandbook theme={theme} />
                   </div>
 
                   {/* Lead Architect & Developer Card */}
@@ -430,9 +430,9 @@ export default function App() {
           {/* SIMULATOR RENDERING SPACE */}
           <div className="flex-1">
             {activeTab === 'graph' ? (
-              <AlgorithmSimulator />
+              <AlgorithmSimulator theme={theme} />
             ) : (
-              <GridSimulator />
+              <GridSimulator theme={theme} />
             )}
           </div>
 
@@ -476,7 +476,7 @@ export default function App() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto flex flex-col gap-4">
-                  <EducationalHandbook />
+                  <EducationalHandbook theme={theme} />
                   
                   {/* Mobile Developer Card */}
                   <div className={`p-4 rounded-2xl border transition-all duration-300 shadow-sm relative overflow-hidden shrink-0 ${

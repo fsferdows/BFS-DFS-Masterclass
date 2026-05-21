@@ -28,6 +28,7 @@ export interface SimStep {
   neuralLoadPercent?: number;
   depthLimit?: number;
   frontierWithCosts?: { node: string; priority: number; path: string[] }[];
+  activePath?: string[];
 }
 
 export type SimType = 'BFS' | 'DFS' | 'IDS' | 'UCS';

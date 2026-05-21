@@ -399,7 +399,7 @@ export default function GridSimulator() {
           </div>
 
           <div className="flex-1 flex justify-center items-center py-2">
-            <div className="inline-grid grid-cols-10 gap-1.5 p-2.5 bg-slate-900/60 border border-slate-800/60 rounded-xl">
+            <div className="inline-grid grid-cols-10 gap-1 md:gap-1.5 p-1.5 md:p-2.5 bg-slate-900/60 border border-slate-800/60 rounded-xl">
               {Array.from({ length: ROWS }).map((_, rIndex) =>
                 Array.from({ length: COLS }).map((_, cIndex) => {
                   const isStart = coordsEqual(rIndex, cIndex, start[0], start[1]);
@@ -422,7 +422,7 @@ export default function GridSimulator() {
                   } else if (isWallCell) {
                     cellClass = 'bg-slate-700 border-slate-900 shadow-inner';
                   } else if (isActive) {
-                    cellClass = 'bg-orange-500 text-white font-bold border-orange-400 animate-ping';
+                    cellClass = 'bg-orange-500 text-white font-bold border-orange-400 scale-105';
                   } else if (isSolution && currentStep.path.length > 0) {
                     cellClass = 'bg-yellow-400 border-yellow-300 text-slate-950 font-bold scale-105';
                     content = '•';
@@ -436,7 +436,7 @@ export default function GridSimulator() {
                     <button
                       key={`${rIndex}-${cIndex}`}
                       onClick={() => handleCellClick(rIndex, cIndex)}
-                      className={`w-11 h-11 rounded-lg border flex items-center justify-center text-xs font-mono transition-all duration-200 cursor-pointer select-none outline-none ${cellClass} hover:border-emerald-500/80 hover:brightness-105`}
+                      className={`w-[26px] h-[26px] xs:w-[32px] xs:h-[32px] sm:w-9 sm:h-9 md:w-11 md:h-11 text-[9px] sm:text-xs rounded-md border flex items-center justify-center font-mono transition-all duration-200 cursor-pointer select-none outline-none ${cellClass} hover:border-emerald-500/80 hover:brightness-105`}
                     >
                       {content}
                     </button>

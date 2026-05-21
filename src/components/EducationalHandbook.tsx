@@ -102,7 +102,8 @@ function depth_limited_search(node, goal, limit):
   }
 };
 
-export default function EducationalHandbook() {
+export default function EducationalHandbook({ theme = 'dark' }: { theme?: 'light' | 'dark' }) {
+  const isDark = theme === 'dark';
   const [activeSection, setActiveSection] = useState<string>('all');
   const [copiedText, setCopiedText] = useState<string | null>(null);
   
@@ -314,34 +315,42 @@ def uniform_cost_search(graph, start, target):
     return None, float('inf')`;
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden h-full">
+    <div className={`flex flex-col lg:flex-row gap-6 border rounded-2xl overflow-hidden h-full transition-colors duration-300 ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
       {/* Sidebar Table of Contents */}
-      <div className="w-full lg:w-72 bg-slate-950/60 p-4 border-r border-slate-800/80 flex flex-col gap-1.5 shrink-0 max-h-[350px] lg:max-h-full overflow-y-auto scrollbar-thin">
-        <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2 flex items-center gap-1.5">
-          <BookOpen className="w-4 h-4 text-emerald-400" /> ACADEMIC CURRICULUM
+      <div className={`w-full lg:w-72 p-4 border-b lg:border-b-0 lg:border-r flex flex-col gap-1.5 shrink-0 max-h-[350px] lg:max-h-full overflow-y-auto scrollbar-thin transition-colors duration-300 ${isDark ? 'bg-slate-950/60 border-slate-850 border-slate-800/80' : 'bg-slate-50 border-slate-200'}`}>
+        <div className={`text-xs font-semibold uppercase tracking-wider px-3 mb-2 flex items-center gap-1.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <BookOpen className="w-4 h-4 text-emerald-500" /> ACADEMIC CURRICULUM
         </div>
         
         <button
           onClick={() => setActiveSection('all')}
           className={`text-left text-xs py-2.5 px-3 rounded-lg transition-colors cursor-pointer flex items-center gap-2.5 font-medium ${
             activeSection === 'all'
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'text-slate-300 hover:bg-slate-800/40 border border-transparent'
+              ? isDark 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                : 'bg-emerald-50 text-emerald-600 border border-emerald-500/30'
+              : isDark
+                ? 'text-slate-300 hover:bg-slate-805 hover:bg-slate-800/40 border border-transparent'
+                : 'text-slate-700 hover:bg-slate-200/50 border border-transparent'
           }`}
         >
           <span>🌐 Show All Sections</span>
         </button>
 
-        <div className="h-px bg-slate-850 my-1" />
+        <div className={`h-px my-1 ${isDark ? 'bg-slate-800/80' : 'bg-slate-200'}`} />
 
         {sections.map((sec) => (
           <button
             key={sec.id}
             onClick={() => setActiveSection(sec.id)}
-            className={`text-left text-xs py-2 bg-slate-900/30 px-3 rounded-lg border transition-all cursor-pointer flex items-center gap-2.5 ${
+            className={`text-left text-xs py-2 px-3 rounded-lg border transition-all cursor-pointer flex items-center gap-2.5 ${
               activeSection === sec.id
-                ? 'bg-emerald-500/10 text-emerald-400 font-semibold border-emerald-500/30 pl-3.5 shadow-sm shadow-emerald-500/10'
-                : 'text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200'
+                ? isDark
+                  ? 'bg-emerald-500/10 text-emerald-400 font-semibold border-emerald-500/30 pl-3.5 shadow-sm'
+                  : 'bg-emerald-50 text-emerald-700 font-bold border-emerald-250 pl-3.5 shadow-sm'
+                : isDark
+                  ? 'text-slate-400 border-transparent hover:bg-slate-800/50 hover:text-slate-200'
+                  : 'text-slate-600 border-transparent hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
             {sec.icon}
@@ -351,18 +360,22 @@ def uniform_cost_search(graph, start, target):
       </div>
 
       {/* Main Study Guide Content */}
-      <div id="handbook-content-container" className="flex-1 p-5 md:p-8 overflow-y-auto max-h-[750px] lg:max-h-[920px] scroll-smooth text-slate-100">
+      <div id="handbook-content-container" className={`flex-1 p-5 md:p-8 overflow-y-auto max-h-[750px] lg:max-h-[920px] scroll-smooth transition-colors duration-300 ${isDark ? 'text-slate-100 bg-slate-900/10' : 'text-slate-800 bg-slate-100/10'}`}>
         <div className="max-w-4xl space-y-12">
           
           {/* Header */}
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-mono rounded-full mb-3 uppercase tracking-wider">
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 border text-[10px] font-mono rounded-full mb-3 uppercase tracking-wider ${
+              isDark 
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                : 'bg-emerald-50 border-emerald-200 text-emerald-600'
+            }`}>
               <GraduationCap className="w-3.5 h-3.5" /> Core AI Research & Algorithms Handbook
             </div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-white mb-2 font-display">
+            <h1 className={`text-3xl font-extrabold tracking-tight mb-2 font-display ${isDark ? 'text-white' : 'text-slate-900'}`}>
               Uninformed Search Algorithms Masterclass
             </h1>
-            <p className="text-slate-400 text-sm max-w-2xl leading-relaxed font-sans">
+            <p className={`text-sm max-w-2xl leading-relaxed font-sans ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               An advanced, production-grade reference manual analyzing <strong>Breadth-First Search (BFS)</strong>, 
               <strong> Depth-First Search (DFS)</strong>, <strong>Iterative Deepening Search (IDS)</strong>, and 
               <strong> Uniform Cost Search (UCS)</strong>, blending rigorous theoretical models with practical implementation sandboxes.
@@ -371,44 +384,44 @@ def uniform_cost_search(graph, start, target):
 
           {/* Section 1: Conceptual Foundations */}
           {(activeSection === 'all' || activeSection === '1') && (
-            <section id="ref-section-1" className="space-y-4 border-t border-slate-800 pt-6">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2 font-display">
-                <span className="text-emerald-400 font-mono">1.</span> Conceptual Foundations & Terminology
+            <section id="ref-section-1" className={`space-y-4 border-t pt-6 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+              <h2 className={`text-lg font-bold flex items-center gap-2 font-display ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                <span className="text-emerald-500 font-mono">1.</span> Conceptual Foundations & Terminology
               </h2>
               
-              <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-3 leading-relaxed">
+              <div className={`p-4 rounded-xl border text-xs space-y-3 leading-relaxed transition-colors duration-300 ${isDark ? 'p-4 bg-slate-950/40 border-slate-800 text-slate-305 text-slate-300' : 'p-4 bg-slate-50 border-slate-200 text-slate-700'}`}>
                 <p>
                   A <strong>search problem</strong> is formalised by five core components: a <em>start state</em>, 
                   a set of <em>actions</em>, a <em>transition model</em>, a <em>goal test function</em>, and a 
                   <em> path cost function</em>. The sequence of actions leading from start to goal constitutes the <strong>state space trajectory</strong>.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-2 text-slate-400">
-                  <div className="p-3 bg-slate-900 border border-slate-800/80 rounded-lg">
-                    <span className="block font-semibold text-emerald-400 text-[11px] mb-1">Branching Factor (b)</span>
+                <div className={`grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-2 ${isDark ? 'text-slate-400' : 'text-slate-550'}`}>
+                  <div className={`p-3 border rounded-lg transition-colors ${isDark ? 'bg-slate-900 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <span className="block font-bold text-emerald-500 text-[11px] mb-1">Branching Factor (b)</span>
                     The maximum number of successors generated by any expanded node in the graph.
                   </div>
-                  <div className="p-3 bg-slate-900 border border-slate-800/80 rounded-lg">
-                    <span className="block font-semibold text-cyan-400 text-[11px] mb-1">Shallowest Solution (d)</span>
+                  <div className={`p-3 border rounded-lg transition-colors ${isDark ? 'bg-slate-900 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <span className="block font-bold text-cyan-550 text-cyan-600 text-[11px] mb-1">Shallowest Solution (d)</span>
                     The optimal depth from the root state to the closest goal state meeting requirements.
                   </div>
-                  <div className="p-3 bg-slate-900 border border-slate-800/80 rounded-lg">
-                    <span className="block font-semibold text-amber-400 text-[11px] mb-1">Maximum Depth (m)</span>
+                  <div className={`p-3 border rounded-lg transition-colors ${isDark ? 'bg-slate-900 border-slate-800/80' : 'bg-white border-slate-200 shadow-sm'}`}>
+                    <span className="block font-bold text-amber-550 text-amber-600 text-[11px] mb-1">Maximum Depth (m)</span>
                     The theoretical limit or absolute maximum path length inside the search tree (can be infinity).
                   </div>
                 </div>
 
-                <div className="border border-slate-800 bg-slate-950/80 p-4 rounded-xl mt-3 space-y-2">
-                  <h3 className="font-bold text-white flex items-center gap-1.5 text-[11px]">
+                <div className={`border p-4 rounded-xl mt-3 space-y-2 transition-colors duration-300 ${isDark ? 'border-slate-800 bg-slate-950/80' : 'border-slate-200 bg-white shadow-sm'}`}>
+                  <h3 className={`font-bold flex items-center gap-1.5 text-[11px] ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
                     Tree Search vs. Graph Search Distinction
                   </h3>
-                  <p className="text-[11px] text-slate-400">
+                  <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     The difference between <strong>Tree Search</strong> and <strong>Graph Search</strong> is the management of visited nodes.
                   </p>
-                  <ul className="list-disc pl-5 text-[11px] space-y-1 text-slate-400">
-                    <li><strong className="text-slate-200">Tree Search:</strong> Does not store visited states in a closed list. Safely navigates cycle-free trees, but falls into infinite loop catastrophes on cyclic graphs.</li>
-                    <li><strong className="text-slate-200">Graph Search:</strong> Implements a <strong>Closed List</strong> / Visited set to store expanded states. Guarantees safety on cyclic graph structures because it rejects duplicate state expansions, though it requires {"O(V)"} additional space.</li>
+                  <ul className={`list-disc pl-5 text-[11px] space-y-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    <li><strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>Tree Search:</strong> Does not store visited states in a closed list. Safely navigates cycle-free trees, but falls into infinite loop catastrophes on cyclic graphs.</li>
+                    <li><strong className={isDark ? 'text-slate-200' : 'text-slate-800'}>Graph Search:</strong> Implements a <strong>Closed List</strong> / Visited set to store expanded states. Guarantees safety on cyclic graph structures because it rejects duplicate state expansions, though it requires {"O(V)"} additional space.</li>
                   </ul>
                 </div>
               </div>
@@ -845,7 +858,7 @@ def uniform_cost_search(graph, start, target):
               </p>
 
               <div className="overflow-x-auto border border-slate-800 rounded-xl bg-slate-950/20">
-                <table className="w-full text-left border-collapse text-[11px]">
+                <table className="w-full text-left border-collapse text-[11px] min-w-[700px]">
                   <thead>
                     <tr className="bg-slate-950 text-slate-300 border-b border-slate-800 font-mono">
                       <th className="p-2.5 font-bold border-r border-slate-850">Dimension</th>

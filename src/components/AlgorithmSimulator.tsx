@@ -230,10 +230,10 @@ function generateBfsSteps(
         frontier: [...queue],
         activeNode: current,
         edgesTraversed: [...edgesTraversed],
-        log: `Target node [${current}] LOCATED! BFS terminated successfully. Optimal Shortest Hop Path: [${path.join(' → ')}].`,
+        log: `Target node [${current}] LOCATED! BFS finished! This first-located path of ${path.length - 1} hops is guaranteed to be the shortest path possible.`,
         conceptTitle: 'Target Identified!',
-        conceptExplanation: `Target [${current}] popped. Complete path: ${path.join(' → ')}. BFS finishes immediately without expanding remaining nodes.`,
-        academicProofContext: `Complexity Summary: Solved at limit depth d = ${path.length - 1}. Time complexity: O(bᵈ).`,
+        conceptExplanation: `Target [${current}] popped. Resolved path: ${path.join(' → ')}. This sequence is mathematically guaranteed to be the shortest path in terms of hop count (minimum node transitions) because BFS expands all frontier avenues at level d before depth d+1.`,
+        academicProofContext: `Hop-Count Optimality Rule: The first goal node popped by BFS is guaranteed to have the minimal edge-hop distance.`,
         accumulatedCost: currentCost,
         neuralLoadPercent: mockLoad
       });
@@ -337,13 +337,23 @@ function generateDfsSteps(
     log: `Starting Depth-First Search (DFS) from [${start}] to target [${target}].`,
     conceptTitle: 'Stack Initialized',
     conceptExplanation: `DFS boots with a LIFO (Last-In-First-Out) Stack. Purple highlighted nodes represent stack items. Standard DFS plunges vertically down the tree first.`,
-    academicProofContext: 'Space Bounds advantages: DFS only holds nodes on the current pathway, preserving highly memory-efficient O(b * d) limits.',
+    academicProofContext: 'Space Bounds advantages: DFS only holds nodes on the current pathway, preserving memory-efficient O(b * d) limits.',
     accumulatedCost: 0,
-    neuralLoadPercent: 12
+    neuralLoadPercent: 12,
+    activePath: [start]
   });
 
   while (stack.length > 0) {
     const current = stack.pop()!;
+
+    // Precalculate backtrack path representation
+    const path: string[] = [current];
+    let temp = current;
+    while (nodeParents[temp]) {
+      path.unshift(nodeParents[temp]);
+      temp = nodeParents[temp];
+    }
+    const currentCost = getPathCost(path);
 
     if (visitedSet.has(current)) {
       steps.push({
@@ -356,7 +366,8 @@ function generateDfsSteps(
         conceptExplanation: `We popped [${current}], but skipped processing because we have previously visited this node. This prevents infinite cyclical trapping.`,
         academicProofContext: 'Standard Cycle Pruning: Maintaining high integrity check safeguards DFS from deadlocks on cyclic loops.',
         accumulatedCost: 0,
-        neuralLoadPercent: Math.min(100, 20 + visited.length * 10)
+        neuralLoadPercent: Math.min(100, 20 + visited.length * 10),
+        activePath: [...path]
       });
       continue;
     }
@@ -364,14 +375,6 @@ function generateDfsSteps(
     visitedSet.add(current);
     visited.push(current);
 
-    // Backtrack path representation
-    const path: string[] = [current];
-    let temp = current;
-    while (nodeParents[temp]) {
-      path.unshift(nodeParents[temp]);
-      temp = nodeParents[temp];
-    }
-    const currentCost = getPathCost(path);
     const mockLoad = Math.min(100, Math.round(25 + visited.length * 15));
 
     steps.push({
@@ -384,7 +387,8 @@ function generateDfsSteps(
       conceptExplanation: `Popped active node [${current}]. Visited array is appended. DFS will instantly check neighbors and push them to the stack for deep descent.`,
       academicProofContext: 'Non-Optimality Check: Because DFS moves greedily, it can easily record exceptionally long paths while skipping shorter ones.',
       accumulatedCost: currentCost,
-      neuralLoadPercent: mockLoad
+      neuralLoadPercent: mockLoad,
+      activePath: [...path]
     });
 
     if (current === target) {
@@ -398,7 +402,8 @@ function generateDfsSteps(
         conceptExplanation: `Target [${current}] recovered! Path found: ${path.join(' → ')}. Note that DFS paths are generally sub-optimal in graph setups.`,
         academicProofContext: 'Optimal = NO; Complete = YES (only on finite graph structures).',
         accumulatedCost: currentCost,
-        neuralLoadPercent: mockLoad
+        neuralLoadPercent: mockLoad,
+        activePath: [...path]
       });
       return steps;
     }
@@ -425,7 +430,8 @@ function generateDfsSteps(
         conceptExplanation: `Unvisited elements [${validNeighbors.join(', ')}] are pushed onto the Stack. Leftmost node stays on top, guaranteeing left-to-right tree plunge.`,
         academicProofContext: 'Traversal Sequence: Reversing adjacency arrays dynamically ensures canonical left-to-right deep search.',
         accumulatedCost: currentCost,
-        neuralLoadPercent: mockLoad
+        neuralLoadPercent: mockLoad,
+        activePath: [...path]
       });
     } else {
       steps.push({
@@ -438,7 +444,8 @@ function generateDfsSteps(
         conceptExplanation: `Node [${current}] is a dead end. DFS recedes back up the call branch to explore other pending stacks.`,
         academicProofContext: 'Backtracking occurs organically by popping the next ready node from the LIFO frame.',
         accumulatedCost: currentCost,
-        neuralLoadPercent: mockLoad
+        neuralLoadPercent: mockLoad,
+        activePath: [...path]
       });
     }
   }
@@ -453,7 +460,8 @@ function generateDfsSteps(
     conceptExplanation: 'Stack spent without success. DFS exploration complete.',
     academicProofContext: 'Target is completely disconnected from start root.',
     accumulatedCost: 0,
-    neuralLoadPercent: 100
+    neuralLoadPercent: 100,
+    activePath: []
   });
 
   return steps;
@@ -467,7 +475,8 @@ function generateIdsSteps(
   target: string,
   nodes: NodeDef[],
   adjacency: Record<string, string[]>,
-  edges: EdgeDef[]
+  edges: EdgeDef[],
+  maxDepthLimit: number
 ): SimStep[] {
   const steps: SimStep[] = [];
   const overallVisited: string[] = [];
@@ -499,8 +508,8 @@ function generateIdsSteps(
     neuralLoadPercent: 10
   });
 
-  // Iterating through depth limits 0 to 4
-  for (let limit = 0; limit <= 4; limit++) {
+  // Iterating through depth limits 0 to maxDepthLimit
+  for (let limit = 0; limit <= maxDepthLimit; limit++) {
     const dlsVisitedSet = new Set<string>();
     const pathStack: { node: string; depth: number; path: string[] }[] = [
       { node: start, depth: 0, path: [start] }
@@ -836,6 +845,7 @@ export default function AlgorithmSimulator() {
   // Sizing calibration limits for custom tree generator
   const [bfLimit, setBfLimit] = useState<number>(3);
   const [depthLimit, setDepthLimit] = useState<number>(2);
+  const [idsMaxDepth, setIdsMaxDepth] = useState<number>(4);
 
   const customTree = useMemo(() => {
     return buildDynamicTree(bfLimit, depthLimit);
@@ -850,11 +860,14 @@ export default function AlgorithmSimulator() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1200); // ms
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [actionNodeId, setActionNodeId] = useState<string | null>(null);
+  const [actionNodeCoords, setActionNodeCoords] = useState<{ x: number; y: number } | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update starting and target nodes when graphType changes
   useEffect(() => {
+    setActionNodeId(null);
     if (graphType === 'canonical') {
       setStartNode('A');
       setTargetNode('H');
@@ -881,14 +894,14 @@ export default function AlgorithmSimulator() {
     } else if (algoType === 'DFS') {
       newSteps = generateDfsSteps(startNode, targetNode, activeNodes, activeAdjacency, activeEdges);
     } else if (algoType === 'IDS') {
-      newSteps = generateIdsSteps(startNode, targetNode, activeNodes, activeAdjacency, activeEdges);
+      newSteps = generateIdsSteps(startNode, targetNode, activeNodes, activeAdjacency, activeEdges, idsMaxDepth);
     } else if (algoType === 'UCS') {
       newSteps = generateUcsSteps(startNode, targetNode, activeNodes, activeAdjacency, activeEdges);
     }
     setSteps(newSteps);
     setCurrentStepIdx(0);
     setIsPlaying(false);
-  }, [algoType, startNode, targetNode, graphType, activeNodes, activeAdjacency, activeEdges]);
+  }, [algoType, startNode, targetNode, graphType, activeNodes, activeAdjacency, activeEdges, idsMaxDepth]);
 
   // Auto Playback logic
   useEffect(() => {
@@ -974,7 +987,15 @@ export default function AlgorithmSimulator() {
         if (isFrontier) return isHovered ? 'fill-cyan-600 stroke-white scale-105' : 'fill-cyan-700/80 stroke-cyan-500 border-dashed';
         break;
       case 'DFS':
-        if (isVisited) return isHovered ? 'fill-purple-400 stroke-white scale-110' : 'fill-purple-500/95 stroke-purple-400';
+        if (isVisited) {
+          const isActivePath = currentStep.activePath?.includes(nodeId);
+          if (isActivePath) {
+            return isHovered 
+              ? 'fill-purple-400 stroke-pink-400 stroke-2 scale-110 drop-shadow-[0_0_12px_rgba(236,72,153,0.9)]' 
+              : 'fill-purple-500/90 stroke-pink-400 stroke-[2.5px] drop-shadow-[0_0_8px_rgba(236,72,153,0.7)]';
+          }
+          return isHovered ? 'fill-purple-400 stroke-white scale-110' : 'fill-purple-500/95 stroke-purple-400';
+        }
         if (isFrontier) return isHovered ? 'fill-purple-600 stroke-white scale-105' : 'fill-purple-700/80 stroke-purple-500';
         break;
       case 'IDS':
@@ -982,8 +1003,25 @@ export default function AlgorithmSimulator() {
         if (isFrontier) return isHovered ? 'fill-amber-600 stroke-white scale-105' : 'fill-amber-700/80 stroke-amber-500';
         break;
       case 'UCS':
-        if (isVisited) return isHovered ? 'fill-emerald-400 stroke-white scale-110' : 'fill-emerald-500/95 stroke-emerald-400';
-        if (isFrontier) return isHovered ? 'fill-emerald-600 stroke-white scale-105' : 'fill-emerald-700/80 stroke-emerald-500';
+        {
+          const isNodeInUcsMinPath = currentStep.frontierWithCosts?.[0]?.path?.includes(nodeId);
+          if (isVisited) {
+            if (isNodeInUcsMinPath) {
+              return isHovered
+                ? 'fill-emerald-400 stroke-amber-400 stroke-2 scale-110 drop-shadow-[0_0_12px_rgba(245,158,11,0.95)]'
+                : 'fill-emerald-500/90 stroke-amber-400 stroke-[2.5px] drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]';
+            }
+            return isHovered ? 'fill-emerald-400 stroke-white scale-110' : 'fill-emerald-500/95 stroke-emerald-400';
+          }
+          if (isFrontier) {
+            if (isNodeInUcsMinPath) {
+              return isHovered
+                ? 'fill-amber-500 stroke-amber-300 scale-105 drop-shadow-[0_0_10px_rgba(245,158,11,0.95)]'
+                : 'fill-amber-600/80 stroke-amber-400 stroke-[2px] drop-shadow-[0_0_6px_rgba(245,158,11,0.7)]';
+            }
+            return isHovered ? 'fill-emerald-600 stroke-white scale-105' : 'fill-emerald-700/80 stroke-emerald-500';
+          }
+        }
         break;
     }
 
@@ -1220,6 +1258,51 @@ export default function AlgorithmSimulator() {
             </div>
           </div>
         )}
+
+        {/* IDS Search Max Depth calibration parameter input */}
+        {algoType === 'IDS' && (
+          <div className="md:col-span-12 grid grid-cols-1 gap-5 pt-3 mt-1 border-t border-slate-800/60 font-mono text-[11.5px] animate-fadeIn">
+            <div className="space-y-1.5 bg-slate-950/40 p-3 rounded-xl border border-slate-800/50">
+              <div className="flex justify-between items-center">
+                <span className="text-amber-400 font-semibold text-[10px] uppercase flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"/>
+                  IDS Max Depth Limit (for search iterations):
+                </span>
+                <span className="text-amber-300 font-bold bg-slate-900 border border-slate-850 px-2 py-0.5 rounded">
+                  Max Depth: {idsMaxDepth}
+                </span>
+              </div>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={idsMaxDepth}
+                  onChange={(e) => {
+                    setIdsMaxDepth(Number(e.target.value));
+                    setIsPlaying(false);
+                  }}
+                  className="flex-1 h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={idsMaxDepth}
+                  onChange={(e) => {
+                    const val = Math.max(1, Math.min(10, Number(e.target.value) || 1));
+                    setIdsMaxDepth(val);
+                    setIsPlaying(false);
+                  }}
+                  className="w-16 bg-slate-900 border border-slate-800 rounded p-1 text-center text-[11px] text-amber-400 focus:outline-none focus:border-amber-500 font-mono"
+                />
+              </div>
+              <span className="text-[9.5px] text-slate-500 block">
+                Directly configure the depth ceiling limit (DFS runs up to Depth limit {idsMaxDepth}) to search iteratively.
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Sandbox Layout Panel */}
@@ -1355,9 +1438,25 @@ export default function AlgorithmSimulator() {
                 const textX = (srcNode.x + destNode.x) / 2;
                 const textY = (srcNode.y + destNode.y) / 2 - 8;
 
+                const isEdgeInUcsMinPath = (() => {
+                  if (algoType !== 'UCS' || !currentStep?.frontierWithCosts?.[0]) return false;
+                  const path = currentStep.frontierWithCosts[0].path;
+                  for (let i = 0; i < path.length - 1; i++) {
+                    if (
+                      (path[i] === edge.source && path[i+1] === edge.target) ||
+                      (path[i] === edge.target && path[i+1] === edge.source)
+                    ) {
+                      return true;
+                    }
+                  }
+                  return false;
+                })();
+
                 // Pick appropriate direction marker ID based on chosen algorithm
                 let markerId = 'url(#arrow)';
-                if (active) {
+                if (isEdgeInUcsMinPath) {
+                  markerId = 'url(#arrow-amber)';
+                } else if (active) {
                   if (algoType === 'BFS') markerId = 'url(#arrow-cyan)';
                   else if (algoType === 'DFS') markerId = 'url(#arrow-purple)';
                   else if (algoType === 'IDS') markerId = 'url(#arrow-amber)';
@@ -1366,7 +1465,9 @@ export default function AlgorithmSimulator() {
 
                 // Pick edge stroke color
                 let edgeColorClass = 'stroke-slate-800';
-                if (hovered) {
+                if (isEdgeInUcsMinPath) {
+                  edgeColorClass = 'stroke-amber-400 stroke-[3.5px] drop-shadow-[0_0_8px_rgba(245,158,11,0.95)]';
+                } else if (hovered) {
                   edgeColorClass = 'stroke-sky-400 stroke-[3px] drop-shadow-[0_0_6px_rgba(56,189,248,0.7)]';
                 } else if (active) {
                   if (algoType === 'BFS') edgeColorClass = 'stroke-cyan-500 stroke-[2px.5]';
@@ -1436,6 +1537,11 @@ export default function AlgorithmSimulator() {
                 const isStart = node.id === startNode;
                 const isTarget = node.id === targetNode;
 
+                const isNodeInUcsMinPath = (() => {
+                  if (algoType !== 'UCS' || !currentStep?.frontierWithCosts?.[0]) return false;
+                  return currentStep.frontierWithCosts[0].path.includes(node.id);
+                })();
+
                 // Determine nodes glowing identifier filter
                 let filterGlow: string | undefined = undefined;
                 if (isHovered || isActive) {
@@ -1443,6 +1549,8 @@ export default function AlgorithmSimulator() {
                   else if (algoType === 'DFS') filterGlow = 'url(#glow-purple)';
                   else if (algoType === 'IDS') filterGlow = 'url(#glow-amber)';
                   else filterGlow = 'url(#glow-emerald)';
+                } else if (isNodeInUcsMinPath) {
+                  filterGlow = 'url(#glow-amber)';
                 }
 
                 // Customize circle size on hover or start/target status
@@ -1455,15 +1563,20 @@ export default function AlgorithmSimulator() {
                     onMouseEnter={() => setHoveredNodeId(node.id)}
                     onMouseLeave={() => setHoveredNodeId(null)}
                     onClick={() => {
-                      // Click defaults toggling Start vs Target nodes sequentially
-                      if (node.id === startNode) {
-                        return; // already start
-                      }
-                      if (node.id === targetNode) {
-                        setTargetNode(startNode);
-                        setStartNode(node.id);
+                      if (graphType === 'custom') {
+                        setActionNodeId(node.id);
+                        setActionNodeCoords({ x: node.x, y: node.y });
                       } else {
-                        setTargetNode(node.id);
+                        // Click defaults toggling Start vs Target nodes sequentially
+                        if (node.id === startNode) {
+                          return; // already start
+                        }
+                        if (node.id === targetNode) {
+                          setTargetNode(startNode);
+                          setStartNode(node.id);
+                        } else {
+                          setTargetNode(node.id);
+                        }
                       }
                       setIsPlaying(false);
                     }}
@@ -1525,6 +1638,48 @@ export default function AlgorithmSimulator() {
                 );
               })}
             </svg>
+
+            {/* Active Node Selection Overlay Popup Menu */}
+            {graphType === 'custom' && actionNodeId && actionNodeCoords && (
+              <div 
+                className="absolute z-50 bg-slate-900 border border-slate-800 rounded-xl p-2.5 shadow-2xl flex flex-col gap-1.5 transition-all duration-300 animate-fadeIn min-w-[155px] font-sans text-xs text-white"
+                style={{
+                  left: `${(actionNodeCoords.x / 490) * 100}%`,
+                  top: `${(actionNodeCoords.y / 350) * 100}%`,
+                  transform: 'translate(-50%, -115%)'
+                }}
+              >
+                <div className="flex justify-between items-center text-[10px] text-slate-400 font-mono font-bold border-b border-slate-800/80 pb-1 mb-1">
+                  <span>Node [ {actionNodeId} ] Setup</span>
+                  <button
+                    onClick={() => setActionNodeId(null)}
+                    className="hover:text-rose-450 text-rose-400 font-mono font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setStartNode(actionNodeId);
+                    setActionNodeId(null);
+                    setIsPlaying(false);
+                  }}
+                  className="w-full text-left py-1 px-2 rounded hover:bg-emerald-500/10 hover:text-emerald-400 font-medium font-mono text-[10.5px] transition-all cursor-pointer"
+                >
+                  🏁 Set as Start Root
+                </button>
+                <button
+                  onClick={() => {
+                    setTargetNode(actionNodeId);
+                    setActionNodeId(null);
+                    setIsPlaying(false);
+                  }}
+                  className="w-full text-left py-1 px-2 rounded hover:bg-rose-500/10 hover:text-rose-400 font-medium font-mono text-[10.5px] transition-all cursor-pointer"
+                >
+                  🎯 Set as Target Goal
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Graphical Legend Footer Section */}
@@ -1596,6 +1751,62 @@ export default function AlgorithmSimulator() {
               </div>
             )}
           </div>
+
+          {/* UCS Cumulative Costs & Minimum Path Highlighting Explorer Block */}
+          {algoType === 'UCS' && currentStep && (
+            <div className="bg-slate-950/80 rounded-xl border border-slate-800/95 p-4 flex flex-col gap-3 relative overflow-hidden backdrop-blur-md">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  <Database className="w-3.5 h-3.5 text-amber-400" />
+                  UCS Cumulative Cost Paths
+                </span>
+                <span className="font-mono text-[9px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
+                  g(n) SORTED
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Paths under exploration in Priority Queue, sorted by cumulative cost:
+              </div>
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {!currentStep.frontierWithCosts || currentStep.frontierWithCosts.length === 0 ? (
+                  <div className="text-center p-4 text-slate-500 font-mono text-xs">
+                    No active pathways under inspection
+                  </div>
+                ) : (
+                  currentStep.frontierWithCosts.map((pqItem, idx) => {
+                    const isMinCost = idx === 0;
+                    return (
+                      <div
+                        key={`ucs-path-${pqItem.node}-${idx}`}
+                        className={`p-2 rounded-lg border text-xs font-mono transition-all duration-200 ${
+                          isMinCost
+                            ? 'bg-amber-500/10 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.15)] animate-pulse'
+                            : 'bg-slate-900/40 border-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center gap-2">
+                          <span className={`${isMinCost ? 'text-amber-400 font-bold animate-pulse' : 'text-slate-300'}`}>
+                            {pqItem.path.join(' → ')}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            isMinCost ? 'bg-amber-500 text-slate-950 shadow-sm' : 'bg-slate-800 text-slate-300'
+                          }`}>
+                            Cost: {pqItem.priority}
+                          </span>
+                        </div>
+                        {isMinCost && (
+                          <div className="text-[9px] text-amber-500/80 mt-1 flex items-center gap-1 font-mono uppercase font-bold">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                            🏆 MINIMUM CUMULATIVE COST PATH
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ACTIVE SEARCH FRONTIER CONTAINER PANEL */}
           <div className="bg-slate-950/80 rounded-xl border border-slate-800/95 p-4 flex-1 flex flex-col">
@@ -1757,6 +1968,23 @@ export default function AlgorithmSimulator() {
 
         </div>
       </div>
+
+      {/* BFS Shortest Path Optimality Confirmation Banner */}
+      {algoType === 'BFS' && currentStep && currentStep.activeNode === targetNode && (
+        <div className="bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 p-4 rounded-xl flex items-start gap-3.5 animate-fadeIn text-xs select-none shadow-[0_0_15px_rgba(6,182,212,0.15)]">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-sm ring-4 ring-cyan-500/10 shrink-0">
+            ✓
+          </span>
+          <div className="space-y-1">
+            <span className="font-bold text-[11px] uppercase text-cyan-300 tracking-wider block font-mono">
+              🏆 BFS Shortest-Path Optimality Guarantee Verified
+            </span>
+            <p className="text-slate-300 font-sans text-xs leading-relaxed">
+              Breadth-First Search systematically expands all adjacent nodes layer-by-layer (depth d, d+1, d+2, ...). Because it checks nodes in strict order of search depth, the first time target <strong className="text-cyan-300 font-semibold font-mono">[{targetNode}]</strong> is discovered, that solution is <strong className="text-cyan-300 font-semibold underline decoration-dotted">mathematically guaranteed</strong> to be the path of absolute minimal hop-count (fewest overall edge hops).
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Interactive Academic Explanations Panel with dynamic proof and model diagnostics */}
       <div className="bg-slate-950/80 p-5 border border-slate-800 rounded-2xl leading-relaxed text-slate-300 text-xs space-y-4">
